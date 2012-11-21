@@ -6,9 +6,8 @@ Overview
 
 Requirements:
 
-* GLib_
-* Libxml2_
-* pkg-config_
+* Libxml2_ (version 2.0)
+* pkg-config_ (used by the Makefile to determine the location of libxml-2.0)
 
 Installation::
 
@@ -54,14 +53,13 @@ Author
   Florian Leitner (c) 2012
 
 License
-  Public Domain
+  MIT License
 
 Disclaimer
   Use at your own risk and sole responsibility, without warranties or conditions of any kind.
 
 Note
-  This is derative work based on GLib_ (LGPL) and Libxml2_ (MIT License).
+  This work is based on the Libxml2_ (MIT License, too).
 
 .. _pkg-config: http://pkgconfig.freedesktop.org/
-.. _GLib: http://library.gnome.org/
 .. _Libxml2: http://xmlsoft.org/

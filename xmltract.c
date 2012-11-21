@@ -2,7 +2,7 @@
  * \file       xmltract.c
  * \brief      Iterative extraction of a particular XML element's content
  *             selected by name (and prefix).
- * \details    This is derative work based on GLib (LGPL) and Libxml2 (MIT License).
+ * \details    This is derative work requiring the Libxml2 (MIT License).
  *
  * \author     Florian Leitner
  * \copyright  Public Domain 2012
@@ -109,7 +109,7 @@ int parse(xmlTextReaderPtr reader, const char *prefix, const char *name, int ign
     }
   }
 
-  return result;
+  return result == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 /** Extract the particular XML content from a file. */
@@ -124,66 +124,25 @@ int parseFile(
 
   // parse the file if the reader could be created
   if (reader) {
-    g_message("parsing '%s'", filename);
     parse_result = parse(reader, prefix, name, ignore_case);
     xmlFreeTextReader(reader);
     xmlCleanupParser();
   } else {
-    g_error("could not open '%s' for reading", filename);
+    fprintf(stderr, "could not open '%s' for reading\n", filename);
   }
 
   return parse_result;
-}
-
-/** Default log handler does nothing. */
-void silent_handler(
-    const gchar *log_domain,
-    GLogLevelFlags log_level,
-    const gchar *message,
-    gpointer user_data) {
-  return;
-}
-
-/** This log handler prints to STDERR. */
-void stderr_handler(
-    const gchar *log_domain,
-    GLogLevelFlags log_level,
-    const gchar *message,
-    gpointer user_data) {
-  char buffer[20];
-  time_t now = time(NULL);
-  struct tm *now_p = localtime(&now);
-  char *time_p = &buffer[0];
-  char *level_p;
-
-  switch (log_level & G_LOG_LEVEL_MASK)
-  {
-    case G_LOG_LEVEL_ERROR:    level_p = "ERRO"; break;
-    case G_LOG_LEVEL_CRITICAL: level_p = "CRIT"; break;
-    case G_LOG_LEVEL_WARNING:  level_p = "WARN"; break;
-    case G_LOG_LEVEL_MESSAGE:  level_p = "MESG"; break;
-    case G_LOG_LEVEL_INFO:     level_p = "INFO"; break;
-    case G_LOG_LEVEL_DEBUG:    level_p = "DEBG"; break;
-    default:                   level_p = "LVL?";
-  }
-
-  if (strftime(time_p, 20, "%Y-%M-%d %H:%M:%S", now_p) == 0)
-    time_p = asctime(now_p);
-
-  fprintf(stderr, "%s %s: %s: %s\n", level_p, time_p, log_domain, message);
 }
 
 /** Print help and exit. */
 static void help(char *name) {
   fprintf(
       stderr,
-      "usage: %s [-hiqv] [-e encoding] [-p prefix] name [infiles]\n\n",
+      "usage: %s [-hi] [-e encoding] [-p prefix] name [infiles]\n\n",
       basename(name));
   fputs("extract content for a particular element (name) from XML\n\n", stderr);
   fputs("-h      print this help and exit\n", stderr);
   fputs("-i      ignore case of name (and prefix)\n", stderr);
-  fputs("-q      quiet logging (errors only)\n", stderr);
-  fputs("-v      verbose logging (default: warnings)\n", stderr);
   fputs("-e ENC  set encoding (default: UTF-8)\n", stderr);
   fputs("-p PFX  match prefix, too\n", stderr);
   exit(0);
@@ -191,7 +150,6 @@ static void help(char *name) {
 
 /** Execute an extraction process. */
 int main(int argc, char **argv) {
-  int verbosity = 1;
   int show_help = 0;
   int ignore_case = 0;
   int exit_status = EXIT_FAILURE;
@@ -200,32 +158,20 @@ int main(int argc, char **argv) {
   char *prefix = NULL;
   char *name = NULL;
 
-  // default logging: silence
-  g_log_set_default_handler(silent_handler, NULL);
-
   // option parsing
-  while ((c = getopt(argc, argv, "hiqve:p:")) != -1)
+  while ((c = getopt(argc, argv, "hie:p:")) != -1)
     switch (c)
     {
       case 'h': show_help = 1; break;
       case 'i': ignore_case = 1; break;
-      case 'v': if (verbosity == 1) verbosity = 2; break;
-      case 'q': if (verbosity == 1) verbosity = 0; break;
       case 'e': encoding = optarg; break;
       case 'p': prefix = optarg; break;
       case '?': break; // getopt prints an error message
       default: abort();
     }
 
-  // logging setup
-  GLogLevelFlags log_level = G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_ERROR | G_LOG_FLAG_FATAL;
-  if (verbosity > 0) log_level |= G_LOG_LEVEL_WARNING;
-  if (verbosity > 1) log_level |= G_LOG_LEVEL_MESSAGE;
-  if (verbosity > 2) log_level |= G_LOG_LEVEL_INFO | G_LOG_LEVEL_DEBUG;
-  g_log_set_handler(G_LOG_DOMAIN, log_level, stderr_handler, NULL);
-
   // print help and exit if requested
-  if (show_help) help (argv[0]);
+  if (show_help) help(argv[0]);
 
   // ensure name argument
   if (argc - optind < 1) {
@@ -238,27 +184,31 @@ int main(int argc, char **argv) {
   if (ignore_case) {
     strtoupper(name);
     if (prefix != NULL) strtoupper(prefix);
-    g_message("matching '%s' ignoring case", name);
-  } else {
-    g_message("matching '%s' case sensitive", name);
   }
 
   if (optind < argc) {
     // parse input files
-    for (; optind < argc; optind++)
-      if ((c = parseFile(argv[optind], encoding, prefix, name, ignore_case)) != 0)
-        g_error("XML reader failed to parse '%s'", argv[optind]);
+    for (; optind < argc; optind++) {
+      exit_status = parseFile(argv[optind], encoding, prefix, name, ignore_case);
 
-    if (optind == argc && c == 0) exit_status = EXIT_SUCCESS;
+      if (exit_status != EXIT_SUCCESS) {
+        fprintf(stderr, "failed to parse '%s'\n", argv[optind]);
+        break;
+      }
+    }
+
+    if (optind == argc) exit_status = EXIT_SUCCESS;
   } else {
     // streaming XML from STDIN
-    g_message("%s streaming mode", encoding);
     xmlTextReaderPtr reader = xmlReaderForFd(fileno(stdin), NULL, encoding, 0);
 
     if (reader != NULL) {
-      if (parse(reader, prefix, name, ignore_case) == 0) exit_status = EXIT_SUCCESS;
-      else g_critical("XML reader failed to parse the input stream");
+      if ((exit_status = parse(reader, prefix, name, ignore_case)) != EXIT_SUCCESS)
+        fputs("failed to parse the standard input stream\n", stderr);
+
       xmlFreeTextReader(reader);
+    } else {
+      fputs("failed to read from standard input\n", stderr);
     }
   }
 
