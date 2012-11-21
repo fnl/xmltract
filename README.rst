@@ -36,6 +36,6 @@ Extracting ``NAME`` from the above example will result in::
 Legal BS
 --------
 
-| Author: &copy; Florian Leitner 2012
+| Author: Florian Leitner (c) 2012
 | License: Public Domain
 | Disclaimer: Use at your own risk and responsibility.
