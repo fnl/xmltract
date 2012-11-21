@@ -1,18 +1,12 @@
 xmltract
 ========
 
-Installation
-------------
-
-::
+Installation::
   make
   cp xmltract /usr/local/bin/
   make clean
 
-Usage
------
-
-::
+Usage::
   # show a count of uniqe element content
   xmltract elementName *.xml | sort | uniq -c | sort -n
   # continously extract content from a stream
@@ -35,3 +29,8 @@ Extracting ``NAME`` from the above example will result in:
 ::
   Hi there, Bob
   Bob
+
+| --
+| (c) Florian Leitner 2012
+| License: Public Domain
+| Disclaimer: Use at your own risk and responsibility.
