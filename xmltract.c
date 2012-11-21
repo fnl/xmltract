@@ -2,6 +2,18 @@
 #include <libxml/xmlreader.h>
 #include <libxml/tree.h>
 
+/** Ensure the two strings are both NULL or match.  */
+int match(const char *str1, const char *str2) {
+  if (str1 != str2) {
+    if (str1 == NULL || str2 == NULL) return 0;
+    else if (strcmp(str1, str2) == 0) return 1;
+    else return 0; 
+  }
+
+  // same pointer (incl. both NULL)
+  return 1;
+}
+
 /** Trim spaces and normalize successive spaces to a single whitespace. */
 size_t trim(char *out, size_t len, const char *str) {
   *out = 0;
@@ -44,49 +56,44 @@ size_t trim(char *out, size_t len, const char *str) {
   return out_size;
 }
 
-/** Recurse the document tree, printing the matching element names' content. */
-void printContent(xmlNode *root, const char *name) {
-  xmlNode * node;
-
-  // iterate over this node
-  for (node = root; node; node = node->next) {
-    if (node->type == XML_ELEMENT_NODE) {
-      const char * n = (const char *) node->name;
-
-      // extract node content for matching names
-      if (strcmp(name, n) == 0) {
-        xmlChar *content = xmlNodeGetContent(node);
-
-        if (content != NULL) {
-          size_t len = strlen((char *) content);
-          char buffer[len];
-
-          // print non-empty, timmed content
-          if (trim(&buffer[0], len, (char *) content) > 0) puts(buffer);
-          xmlFree(content);
-        }
-      }
-
-      // recurse over children
-      printContent(node->children, name);
-    }
-  }
+/** Convert a string to uppercase (in memmory). */
+void strtoupper(char *str) {
+  if (str != NULL)
+    for (; *str != 0; str++)
+      *str = toupper(*str);
 }
 
 /** Extract the contents of a particular XML element (name) from a file input stream. */
-int parse(xmlTextReaderPtr reader, const char *name) {
+int parse(xmlTextReaderPtr reader, const char *prefix, const char *name, int ignore_case) {
   int result;
-  xmlDocPtr doc;
+  char *node_name;
+  char *node_prefix = NULL;
+  char *content;
+  size_t len;
 
-  // parse a document, preserving matching name nodes
-  if ((result = xmlTextReaderPreservePattern(reader, (const xmlChar *) name, NULL)) >= 0) {
-    while ((result = xmlTextReaderRead(reader) == 1)) continue;
+  // keep iterating over elments in the stream
+  while ((result = xmlTextReaderRead(reader)) == 1) {
+    if (xmlTextReaderNodeType(reader) == XML_READER_TYPE_ELEMENT) {
+      // compare the element's (prefix and) name to the target name
+      node_name = (char *) xmlTextReaderLocalName(reader);
 
-    // create a documten from the preserved nodes and print their content
-    if (result == 0) {
-      doc = xmlTextReaderCurrentDoc(reader);
-      printContent(xmlDocGetRootElement(doc), name);
-      xmlFreeDoc(doc);
+      if (ignore_case) strtoupper(node_name);
+
+      if (prefix) {
+        node_prefix = (char *) xmlTextReaderPrefix(reader);
+        if (ignore_case) strtoupper(node_prefix);
+      }
+
+      if (match(prefix, node_prefix) && match(name, node_name)) {
+        // print a matching element's content as a trimmed string
+        content = (char *) xmlTextReaderReadString(reader);
+
+        if (content) {
+          len = strlen(content);
+          char trimmed[len];
+          if (trim(trimmed, len, content) > 0) puts(trimmed);
+        }
+      }
     }
   }
 
@@ -94,14 +101,19 @@ int parse(xmlTextReaderPtr reader, const char *name) {
 }
 
 /** Extract the particular XML content from a file. */
-int parseFile(const char *filename, const char *encoding, const char *name) {
+int parseFile(
+    const char *filename,
+    const char *encoding,
+    const char *prefix,
+    const char *name,
+    int ignore_case) {
   xmlTextReaderPtr reader = xmlReaderForFile(filename, encoding, 0);
   int parse_result = -1;
 
   // parse the file if the reader could be created
   if (reader) {
     g_message("parsing '%s'", filename);
-    parse_result = parse(reader, name);
+    parse_result = parse(reader, prefix, name, ignore_case);
     xmlFreeTextReader(reader);
     xmlCleanupParser();
   } else {
@@ -109,17 +121,6 @@ int parseFile(const char *filename, const char *encoding, const char *name) {
   }
 
   return parse_result;
-}
-
-/** Print help and exit. */
-static void help(char *name) {
-  fprintf(stderr, "usage: %s [-hqv] [-e encoding] name [infiles]\n\n", basename(name));
-  fputs("extract content for a particular element (name) from XML\n\n", stderr);
-  fputs("-e ENC  set encoding (default: UTF-8)\n", stderr);
-  fputs("-h      print this help and exit\n", stderr);
-  fputs("-q      quiet logging (errors only)\n", stderr);
-  fputs("-v      verbose logging (default: warnings)\n", stderr);
-  exit(0);
 }
 
 /** Default log handler does nothing. */
@@ -160,25 +161,45 @@ static void stderr_handler(
   fprintf(stderr, "%s %s: %s: %s\n", level_p, time_p, log_domain, message);
 }
 
+/** Print help and exit. */
+static void help(char *name) {
+  fprintf(
+      stderr,
+      "usage: %s [-hip:qv] [-e encoding] [-p prefix] name [infiles]\n\n",
+      basename(name));
+  fputs("extract content for a particular element (name) from XML\n\n", stderr);
+  fputs("-e ENC  set encoding (default: UTF-8)\n", stderr);
+  fputs("-h      print this help and exit\n", stderr);
+  fputs("-i      ignore case of name (and prefix)\n", stderr);
+  fputs("-p PFX  match prefix, too\n", stderr);
+  fputs("-q      quiet logging (errors only)\n", stderr);
+  fputs("-v      verbose logging (default: warnings)\n", stderr);
+  exit(0);
+}
+
 int main(int argc, char **argv) {
   int verbosity = 1;
   int show_help = 0;
-  int name_idx = 1;
+  int ignore_case = 0;
   int exit_status = EXIT_FAILURE;
   int c;
   char *encoding = "UTF-8";
+  char *prefix = NULL;
+  char *name = NULL;
 
   // default logging: silence
   g_log_set_default_handler(silent_handler, NULL);
 
   // option parsing
-  while ((c = getopt(argc, argv, "hqve:")) != -1)
+  while ((c = getopt(argc, argv, "hiqve:p:")) != -1)
     switch (c)
     {
       case 'h': show_help = 1; break;
+      case 'i': ignore_case = 1; break;
       case 'v': if (verbosity == 1) verbosity = 2; break;
       case 'q': if (verbosity == 1) verbosity = 0; break;
       case 'e': encoding = optarg; break;
+      case 'p': prefix = optarg; break;
       case '?': break; // getopt prints an error message
       default: abort();
     }
@@ -198,13 +219,21 @@ int main(int argc, char **argv) {
     fputs("name argument missing\n", stderr);
     exit(EXIT_FAILURE);
   } else {
-    name_idx = optind++;
+    name = argv[optind++];
+  }
+
+  if (ignore_case) {
+    strtoupper(name);
+    if (prefix != NULL) strtoupper(prefix);
+    g_message("matching '%s' ignoring case", name);
+  } else {
+    g_message("matching '%s' case sensitive", name);
   }
 
   if (optind < argc) {
     // parse input files
     for (; optind < argc; optind++)
-      if ((c = parseFile(argv[optind], encoding, argv[name_idx])) != 0)
+      if ((c = parseFile(argv[optind], encoding, prefix, name, ignore_case)) != 0)
         g_error("XML reader failed to parse '%s'", argv[optind]);
 
     if (optind == argc && c == 0) exit_status = EXIT_SUCCESS;
@@ -212,9 +241,12 @@ int main(int argc, char **argv) {
     // streaming XML from STDIN
     g_message("%s streaming mode", encoding);
     xmlTextReaderPtr reader = xmlReaderForFd(fileno(stdin), NULL, encoding, 0);
-    if (parse(reader, argv[name_idx]) == 0) exit_status = EXIT_SUCCESS;
-    else g_critical("XML reader failed to parse the input stream");
-    xmlFreeTextReader(reader);
+
+    if (reader != NULL) {
+      if (parse(reader, prefix, name, ignore_case) == 0) exit_status = EXIT_SUCCESS;
+      else g_critical("XML reader failed to parse the input stream");
+      xmlFreeTextReader(reader);
+    }
   }
 
   return exit_status;
