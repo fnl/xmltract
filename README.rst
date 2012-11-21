@@ -37,7 +37,7 @@ Usage::
 Notes
 -----
 
-All character content will be normalized by trimming spaces and normalizing successive **spaces** to single **whitespaces**. Content includes any content found within children. If an element is defined recursively within itself, they will be extracted as independent content strings::
+All character content will be normalized by trimming spaces and normalizing successive **spaces** to single **whitespaces**. Content includes any character data found within children. If an element is defined recursively within itself, each element's content will be extracted as independent string::
 
     <NAME>
     Hi there,
