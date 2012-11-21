@@ -14,24 +14,15 @@ Installation::
 
     make
     ./xmltract -p ns val test.xml # should print "foo inner bar"
-    cp xmltract /usr/local/bin/
-    make clean
+    mv xmltract /usr/local/bin/
 
 Usage::
 
     $ xmltract -h
     usage: xmltract [-hiqv] [-e encoding] [-p prefix] name [infiles]
-    
-    extract content for a particular element (name) from XML
-    
-    -h      print this help and exit
-    -i      ignore case of name (and prefix)
-    -q      quiet logging (errors only)
-    -v      verbose logging (default: warnings)
-    -e ENC  set encoding (default: UTF-8)
-    -p PFX  match prefix, too
+    ... (prints help string) ...
 
-    $ # count uniqe element content
+    $ # count uniqe character content in elements
     $ xmltract val test.xml | sort | uniq -c | sort -n
     1 foo inner bar
     1 inner
@@ -47,14 +38,14 @@ Usage::
 Notes
 -----
 
-All content will be normalized by trimming spaces and normalizing successive spaces to single whitespaces. Content includes any content found within children, too: If an element is defined recursively within itself, it will be exactracted as two independent content strings::
+All character content will be normalized by trimming spaces and normalizing successive **spaces** to single **whitespaces**. Content includes any content found within children. If an element is defined recursively within itself, it will be exactracted as two independent content strings::
 
     <NAME>
     Hi there,
     <NAME>Bob</NAME>
     </NAME>
 
-Extracting ``NAME`` from the above example will result in::
+Extracting the character data from the ``NAME`` elements in the above example will result in::
 
     Hi there, Bob
     Bob
