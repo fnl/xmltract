@@ -5,7 +5,7 @@
  * \details    This is derative work requiring the Libxml2 (MIT License).
  *
  * \author     Florian Leitner
- * \copyright  Public Domain 2012
+ * \copyright  MIT License, 2012
  * \warning    Use at your own risk and sole responsibility,
  *             without warranties or conditions of any kind.
  */

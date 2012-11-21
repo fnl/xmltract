@@ -18,7 +18,7 @@ Installation::
 Usage::
 
     $ xmltract -h
-    usage: xmltract [-hiqv] [-e encoding] [-p prefix] name [infiles]
+    usage: xmltract [-hi] [-e encoding] [-p prefix] name [infiles]
     ... (prints help string) ...
 
     $ # count uniqe character content in elements
