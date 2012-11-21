@@ -1,3 +1,15 @@
+/*!
+ * \file       xmltract.c
+ * \brief      Iterative extraction of a particular XML element's content
+ *             selected by name (and prefix).
+ * \details    This is derative work based on GLib (LGPL) and Libxml2 (MIT License).
+ *
+ * \author     Florian Leitner
+ * \copyright  Public Domain 2012
+ * \warning    Use at your own risk and sole responsibility,
+ *             without warranties or conditions of any kind.
+ */
+
 #include <libgen.h> // basename()
 #include <libxml/xmlreader.h>
 #include <libxml/tree.h>
@@ -124,7 +136,7 @@ int parseFile(
 }
 
 /** Default log handler does nothing. */
-static void silent_handler(
+void silent_handler(
     const gchar *log_domain,
     GLogLevelFlags log_level,
     const gchar *message,
@@ -133,7 +145,7 @@ static void silent_handler(
 }
 
 /** This log handler prints to STDERR. */
-static void stderr_handler(
+void stderr_handler(
     const gchar *log_domain,
     GLogLevelFlags log_level,
     const gchar *message,
@@ -177,6 +189,7 @@ static void help(char *name) {
   exit(0);
 }
 
+/** Execute an extraction process. */
 int main(int argc, char **argv) {
   int verbosity = 1;
   int show_help = 0;
