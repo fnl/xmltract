@@ -4,6 +4,12 @@ xmltract
 Overview
 --------
 
+Requirements:
+
+* GLib_
+* Libxml2_
+* pkg-config_
+
 Installation::
 
     make
@@ -56,4 +62,8 @@ Extracting ``NAME`` from the above example will result in::
 | Author: Florian Leitner (c) 2012
 | License: Public Domain
 | Disclaimer: Use at your own risk and sole responsibility, without warranties or conditions of any kind.
-| Note: This is derative work based on GLib (LGPL) and Libxml2 (MIT License).
+| Note: This is derative work based on GLib_ (LGPL) and Libxml2_ (MIT License).
+
+.. _pkg-config: http://pkgconfig.freedesktop.org/
+.. _GLib: http://library.gnome.org/
+.. _Libxml2: http://xmlsoft.org/
