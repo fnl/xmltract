@@ -1,0 +1,7 @@
+<doc xmlns:ns='url'>
+  <ns:val xmlns:ns2='uri'>
+    foo
+    <ns2:val>inner</ns2:val>
+    bar
+  </ns:val>
+</doc>
