@@ -165,15 +165,15 @@ static void stderr_handler(
 static void help(char *name) {
   fprintf(
       stderr,
-      "usage: %s [-hip:qv] [-e encoding] [-p prefix] name [infiles]\n\n",
+      "usage: %s [-hiqv] [-e encoding] [-p prefix] name [infiles]\n\n",
       basename(name));
   fputs("extract content for a particular element (name) from XML\n\n", stderr);
-  fputs("-e ENC  set encoding (default: UTF-8)\n", stderr);
   fputs("-h      print this help and exit\n", stderr);
   fputs("-i      ignore case of name (and prefix)\n", stderr);
-  fputs("-p PFX  match prefix, too\n", stderr);
   fputs("-q      quiet logging (errors only)\n", stderr);
   fputs("-v      verbose logging (default: warnings)\n", stderr);
+  fputs("-e ENC  set encoding (default: UTF-8)\n", stderr);
+  fputs("-p PFX  match prefix, too\n", stderr);
   exit(0);
 }
 
